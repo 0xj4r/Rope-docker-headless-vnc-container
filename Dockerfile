@@ -58,15 +58,15 @@ ENV PATH /opt/conda/bin:$PATH
 ADD ./src/common/install/ $INST_SCRIPTS/
 ADD ./src/debian/install/ $INST_SCRIPTS/
 
-# Add execute permissions to all scripts
-RUN chmod +x /workspace/install/tools.sh \
-    /workspace/install/install_custom_fonts.sh \
-    /workspace/install/tigervnc.sh \
-    /workspace/install/no_vnc_1.5.0.sh \
-    /workspace/install/firefox.sh \
-    /workspace/install/xfce_ui.sh \
-    /dockerstartup/libnss_wrapper.sh \
-    /dockerstartup/set_user_permission.sh
+# Add execute permissions to all existing scripts
+RUN [ -f /workspace/install/tools.sh ] && chmod +x /workspace/install/tools.sh || true \
+    && [ -f /workspace/install/install_custom_fonts.sh ] && chmod +x /workspace/install/install_custom_fonts.sh || true \
+    && [ -f /workspace/install/tigervnc.sh ] && chmod +x /workspace/install/tigervnc.sh || true \
+    && [ -f /workspace/install/no_vnc_1.5.0.sh ] && chmod +x /workspace/install/no_vnc_1.5.0.sh || true \
+    && [ -f /workspace/install/firefox.sh ] && chmod +x /workspace/install/firefox.sh || true \
+    && [ -f /workspace/install/xfce_ui.sh ] && chmod +x /workspace/install/xfce_ui.sh || true \
+    && [ -f /dockerstartup/libnss_wrapper.sh ] && chmod +x /dockerstartup/libnss_wrapper.sh || true \
+    && [ -f /dockerstartup/set_user_permission.sh ] && chmod +x /dockerstartup/set_user_permission.sh || true
 
 
 # Other RUN commands for installing dependencies and setting up the environment
