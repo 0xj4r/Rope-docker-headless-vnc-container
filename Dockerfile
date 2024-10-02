@@ -54,7 +54,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 RUN conda create -n Rope python=3.10.13 && conda clean --all -y && \
     echo "source activate Rope" >> ~/.bashrc && \
     git clone https://github.com/Hillobar/Rope.git /workspace/Rope && \
-    pip install --upgrade pip setuptools wheel && \
+    pip install --upgrade pip setuptools==57.5.0 wheel && \
     pip install -r /workspace/Rope/requirements.txt --no-cache-dir
 
 COPY ./src/Models.py /workspace/Rope/rope/Models.py
@@ -63,9 +63,9 @@ COPY ./src/Models.py /workspace/Rope/rope/Models.py
 RUN mkdir -p /workspace/Rope/models && \
     wget -qO- https://api.github.com/repos/Hillobar/Rope/releases/tags/Sapphire | jq -r '.assets[] | .browser_download_url' | xargs -n 1 wget -P /workspace/Rope/models
 
-# Install additional tools
-RUN pip install jupyterlab && \
-    wget -O - https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash
+# # Install additional tools
+# RUN pip install jupyterlab && \
+#     wget -O - https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash
 
 EXPOSE 8080 8585
 
