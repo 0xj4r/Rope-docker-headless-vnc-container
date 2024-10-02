@@ -54,6 +54,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 RUN conda create -n Rope python=3.10.13 && conda clean --all -y && \
     echo "source activate Rope" >> ~/.bashrc && \
     git clone https://github.com/Hillobar/Rope.git /workspace/Rope && \
+    pip install --upgrade pip setuptools wheel && \
     pip install -r /workspace/Rope/requirements.txt --no-cache-dir
 
 COPY ./src/Models.py /workspace/Rope/rope/Models.py
