@@ -68,6 +68,11 @@ RUN [ -f /workspace/install/tools.sh ] && chmod +x /workspace/install/tools.sh |
     && [ -f /dockerstartup/libnss_wrapper.sh ] && chmod +x /dockerstartup/libnss_wrapper.sh || true \
     && [ -f /dockerstartup/set_user_permission.sh ] && chmod +x /dockerstartup/set_user_permission.sh || true
 
+# Add execute permissions to all scripts in the $INST_SCRIPTS directory
+RUN find $INST_SCRIPTS -type f -exec chmod +x {} \;
+
+# Other RUN commands for installing dependencies and setting up the environment...
+
 
 # Other RUN commands for installing dependencies and setting up the environment
 
