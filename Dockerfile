@@ -103,6 +103,9 @@ WORKDIR /workspace/Rope/models
 RUN wget -qO- https://api.github.com/repos/Hillobar/Rope/releases/tags/Sapphire | jq -r '.assets[] | .browser_download_url' | xargs -n 1 wget
 WORKDIR /workspace/Rope
 
+### make sure .bashrc exists
+RUN touch /workspace/.bashrc
+
 ### Install jupyterlab
 RUN pip install jupyterlab
 EXPOSE 8080
