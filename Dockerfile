@@ -58,8 +58,18 @@ ENV PATH /opt/conda/bin:$PATH
 ADD ./src/common/install/ $INST_SCRIPTS/
 ADD ./src/debian/install/ $INST_SCRIPTS/
 
-# Add execute permissions to the tools.sh script
-RUN chmod +x /workspace/install/tools.sh
+# Add execute permissions to all scripts
+RUN chmod +x /workspace/install/tools.sh \
+    /workspace/install/install_custom_fonts.sh \
+    /workspace/install/tigervnc.sh \
+    /workspace/install/no_vnc_1.5.0.sh \
+    /workspace/install/firefox.sh \
+    /workspace/install/xfce_ui.sh \
+    /dockerstartup/libnss_wrapper.sh \
+    /dockerstartup/set_user_permission.sh
+
+
+# Other RUN commands for installing dependencies and setting up the environment
 
 
 ### Install some common tools
