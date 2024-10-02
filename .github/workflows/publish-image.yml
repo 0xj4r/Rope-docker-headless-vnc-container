@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: [ubuntu-latest, large]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -27,3 +27,8 @@ jobs:
       with:
         context: .
         tags: jbransom/rope-headless-vnc:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Clean up Docker
+      run: docker system prune -a -f
