@@ -58,6 +58,10 @@ ENV PATH /opt/conda/bin:$PATH
 ADD ./src/common/install/ $INST_SCRIPTS/
 ADD ./src/debian/install/ $INST_SCRIPTS/
 
+# Add execute permissions to the tools.sh script
+RUN chmod +x /workspace/install/tools.sh
+
+
 ### Install some common tools
 RUN $INST_SCRIPTS/tools.sh
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
