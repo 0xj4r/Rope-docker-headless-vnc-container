@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Image with Remote Caching
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up Docker Buildx for multi-platform builds and caching
+      # Set up Docker Buildx for multi-platform builds and enable remote caching
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -27,16 +27,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build and push the Docker image
-      - name: Build and push Docker image
+      # Build and push the Docker image with remote caching enabled
+      - name: Build and push Docker image with cache
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
+          platforms: linux/amd64
           tags: ${{ secrets.DOCKER_USERNAME }}/rope_vnc_pearl:latest
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rope_vnc_pearl:cache
-          cache-to: type=inline
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rope_vnc_pearl:cache,mode=max
 
-      # Optional: Cleanup old cache
+      # Optional: Clean up unused Docker data to save space
       - name: Prune unused Docker data
         run: docker system prune -f
