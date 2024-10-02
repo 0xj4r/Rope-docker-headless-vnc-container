@@ -34,6 +34,9 @@ ADD ./src/common/install/ $INST_SCRIPTS/
 ADD ./src/debian/install/ $INST_SCRIPTS/
 RUN find $INST_SCRIPTS -type f -exec chmod +x {} \;
 
+# Ensure /dockerstartup directory exists
+RUN mkdir -p /dockerstartup
+
 # Install necessary tools and clean up intermediate files
 RUN $INST_SCRIPTS/tools.sh && \
     $INST_SCRIPTS/install_custom_fonts.sh && \
