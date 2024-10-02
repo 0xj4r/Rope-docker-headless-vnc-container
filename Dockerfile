@@ -1,76 +1,77 @@
-FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 as base
+# Use the NVIDIA CUDA base image with CUDNN and Ubuntu 22.04 for GPU support
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
-ENV REFRESHED_AT 2024-08-12
-LABEL io.k8s.description="Headless VNC Container with Xfce window manager, firefox and chromium" \
-      io.k8s.display-name="Headless VNC Container based on Debian" \
-      io.openshift.expose-services="6901:http,5901:xvnc" \
-      io.openshift.tags="vnc, debian, xfce" \
-      io.openshift.non-scalable=true
+# Metadata and maintainers
+LABEL maintainer="YourName" \
+      description="Dockerfile to run Rope project with a VNC-based desktop environment."
 
-ENV DISPLAY=:1 VNC_PORT=5901 NO_VNC_PORT=6901 \
-    HOME=/workspace TERM=xterm STARTUPDIR=/dockerstartup INST_SCRIPTS=/workspace/install \
-    NO_VNC_HOME=/workspace/noVNC DEBIAN_FRONTEND=noninteractive \
-    VNC_COL_DEPTH=24 VNC_PW=vncpassword VNC_VIEW_ONLY=false TZ=Asia/Seoul
+# Environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    DISPLAY=:1 \
+    VNC_PORT=5901 \
+    NO_VNC_PORT=6901 \
+    HOME=/workspace \
+    VNC_COL_DEPTH=24 \
+    VNC_PW=vncpassword \
+    VNC_VIEW_ONLY=false \
+    TZ=Asia/Seoul \
+    CONDA_DEFAULT_ENV=Rope \
+    NO_VNC_HOME=/workspace/noVNC \
+    STARTUPDIR=/dockerstartup
 
 WORKDIR $HOME
 
-# Combine RUN statements and clean up to minimize layers and space
+# Install necessary dependencies and clean up after installation to reduce image size
 RUN apt-get update && apt-get install -y \
-    wget git build-essential software-properties-common apt-transport-https \
-    ca-certificates unzip ffmpeg jq tzdata && \
-    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    xfce4 xfce4-goodies tightvncserver novnc websockify \
+    git wget curl jq build-essential python3-pip python3-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Miniconda and clean up
+# Install Miniconda
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p /opt/conda && rm miniconda.sh && \
-    /opt/conda/bin/conda clean --all -y
+    bash miniconda.sh -b -p /opt/conda && \
+    rm miniconda.sh
 
+# Add Conda to the PATH
 ENV PATH /opt/conda/bin:$PATH
 
-# Add all install scripts and set permissions
-ADD ./src/common/install/ $INST_SCRIPTS/
-ADD ./src/debian/install/ $INST_SCRIPTS/
-RUN find $INST_SCRIPTS -type f -exec chmod +x {} \;
+# Create and activate Conda environment with Python 3.10, then clean up
+RUN conda create -n Rope python=3.10.13 && conda clean --all -y
 
-# Ensure /dockerstartup directory exists
-RUN mkdir -p /dockerstartup
+# Make the Conda environment active for all future shells
+ENV PATH /opt/conda/envs/Rope/bin:$PATH
 
-# Install necessary tools and clean up intermediate files
-RUN $INST_SCRIPTS/tools.sh && \
-    $INST_SCRIPTS/install_custom_fonts.sh && \
-    $INST_SCRIPTS/tigervnc.sh && \
-    $INST_SCRIPTS/no_vnc_1.5.0.sh && \
-    $INST_SCRIPTS/firefox.sh && \
-    $INST_SCRIPTS/xfce_ui.sh && \
-    $INST_SCRIPTS/libnss_wrapper.sh && \
-    $INST_SCRIPTS/set_user_permission.sh $STARTUPDIR $HOME && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Clone Rope project from the Pearl branch
+WORKDIR /workspace
+RUN git clone -b Pearl https://github.com/Hillobar/Rope.git --depth 1
 
-ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+# Install Rope project dependencies via pip and clean up
+WORKDIR /workspace/Rope
+RUN pip install -r requirements.txt --no-cache-dir
 
-# Create and activate Conda environment, install Rope
-RUN conda create -n Rope python=3.10.13 && conda clean --all -y && \
-    echo "source activate Rope" >> ~/.bashrc && \
-    git clone https://github.com/Hillobar/Rope.git /workspace/Rope && \
-    pip install --upgrade pip setuptools==57.5.0 wheel && \
-    pip install -r /workspace/Rope/requirements.txt --no-cache-dir
+# Download models for the Rope Pearl branch
+WORKDIR /workspace/Rope/models
+RUN wget -qO- https://api.github.com/repos/Hillobar/Rope/releases/tags/Pearl | \
+    jq -r '.assets[] | .browser_download_url' | xargs -n 1 wget
 
-COPY ./src/Models.py /workspace/Rope/rope/Models.py
+# Setup VNC password
+RUN mkdir -p ~/.vnc && echo "$VNC_PW" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd
 
-# Download models
-RUN mkdir -p /workspace/Rope/models && \
-    wget -qO- https://api.github.com/repos/Hillobar/Rope/releases/tags/Sapphire | jq -r '.assets[] | .browser_download_url' | xargs -n 1 wget -P /workspace/Rope/models
+# Set up VNC and noVNC for remote access
+RUN mkdir -p $STARTUPDIR $NO_VNC_HOME/utils/websockify && \
+    wget https://github.com/novnc/noVNC/archive/v1.2.0.tar.gz -O - | tar xz --strip 1 -C $NO_VNC_HOME && \
+    wget https://github.com/novnc/websockify/archive/v0.9.0.tar.gz -O - | tar xz --strip 1 -C $NO_VNC_HOME/utils/websockify
 
-# # Install additional tools
-# RUN pip install jupyterlab && \
-#     wget -O - https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash
+# Copy VNC startup script and make it executable
+COPY ./src/vnc_startup.sh $STARTUPDIR/vnc_startup.sh
+RUN chmod +x $STARTUPDIR/vnc_startup.sh
 
-EXPOSE 8080 8585
+# Clean up git history and any leftover installation files to reduce image size
+RUN rm -rf /workspace/Rope/.git /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY ./src/vnc_startup_jupyterlab_filebrowser.sh /dockerstartup/vnc_startup.sh
-RUN chmod 765 /dockerstartup/vnc_startup.sh
+# Expose VNC and noVNC ports
+EXPOSE $VNC_PORT $NO_VNC_PORT
 
+# Set up entrypoint to start VNC server and noVNC
 ENTRYPOINT ["/dockerstartup/vnc_startup.sh"]
 CMD ["--wait"]
